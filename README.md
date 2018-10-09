@@ -8,6 +8,7 @@ Various collections and utilities.
 ## License
 
 Licensed under either of
+
 * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
 * MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
@@ -26,8 +27,10 @@ Copyright (c) 2018 Kodegenix Sp. z o.o. [http://www.kodegenix.pl](http://www.kod
 ### Disclaimer
 
 This crate contains code from crates 
+
 * https://github.com/contain-rs/linked-hash-map
 * https://github.com/contain-rs/lru-cache
+
 which was copied into this project and further modified, because original projects are currently in "maintenance mode", 
 and maintainers do not accept any new changes to the API.
 

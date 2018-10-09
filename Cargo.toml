@@ -1,6 +1,6 @@
 [package]
 name = "kg-utils"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Jakub Chłapiński <jakub.chlapinski@kodegenix.pl>"]
 description = """
 Various collections and utilities.
