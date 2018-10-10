@@ -2,8 +2,6 @@
 
 #[cfg(test)]
 extern crate test;
-extern crate serde;
-
 
 pub mod collections;
 

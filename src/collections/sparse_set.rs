@@ -6,9 +6,6 @@ use std::collections::VecDeque;
 use std::ops::Deref;
 use std::ptr::NonNull;
 
-use serde::{ser, de};
-
-
 /// A very fast insertion/lookup set type `SparseSet<T>`, with stable insertion-order iteration,
 /// for array index-like element types.
 ///
@@ -183,44 +180,51 @@ where A: TryFrom<usize> + TryInto<usize> + Copy + PartialEq<B>,
 
 unsafe impl<T: TryFrom<usize> + TryInto<usize> + Copy> Send for SparseSet<T> {}
 
-impl<T> ser::Serialize for SparseSet<T>
-    where T: TryFrom<usize> + TryInto<usize> + Copy + ser::Serialize
-{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: ser::Serializer
-    {
-        use self::ser::SerializeSeq;
+#[cfg(feature = "serde_impl")]
+mod serde {
+    extern crate serde;
 
-        let mut seq = serializer.serialize_seq(Some(self.len()))?;
-        for e in self.iter() {
-            seq.serialize_element(e)?;
+    use super::*;
+    use self::serde::{ser, de};
+
+    impl<T> ser::Serialize for SparseSet<T>
+        where T: TryFrom<usize> + TryInto<usize> + Copy + ser::Serialize
+    {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where S: ser::Serializer
+        {
+            use self::ser::SerializeSeq;
+
+            let mut seq = serializer.serialize_seq(Some(self.len()))?;
+            for e in self.iter() {
+                seq.serialize_element(e)?;
+            }
+            seq.end()
         }
-        seq.end()
+    }
+
+    impl<'de, T> de::Deserialize<'de> for SparseSet<T>
+        where T: TryFrom<usize> + TryInto<usize> + Copy + de::Deserialize<'de>
+    {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where D: de::Deserializer<'de>
+        {
+            let elems: Vec<T> = Vec::deserialize(deserializer)?;
+
+            let mut max = 0;
+            for e in elems.iter().cloned() {
+                max = std::cmp::max(max, to_usize(e));
+            }
+
+            let mut set = SparseSet::new(max);
+            for e in elems {
+                set.insert(e);
+            }
+
+            Ok(set)
+        }
     }
 }
-
-impl<'de, T> de::Deserialize<'de> for SparseSet<T>
-    where T: TryFrom<usize> + TryInto<usize> + Copy + de::Deserialize<'de>
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: de::Deserializer<'de>
-    {
-        let elems: Vec<T> = Vec::deserialize(deserializer)?;
-
-        let mut max = 0;
-        for e in elems.iter().cloned() {
-            max = std::cmp::max(max, to_usize(e));
-        }
-
-        let mut set = SparseSet::new(max);
-        for e in elems {
-            set.insert(e);
-        }
-
-        Ok(set)
-    }
-}
-
 
 #[inline]
 fn layout<T>(size: usize) -> Layout {

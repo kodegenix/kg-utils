@@ -2,7 +2,6 @@ use super::*;
 
 use std::vec::IntoIter;
 use std::ops::Deref;
-use serde::{ser, de};
 
 
 /// Simple implementation of an ordered set, using `std::vec::Vec<_>` as underlying storage.
@@ -102,30 +101,38 @@ impl<T> std::fmt::Debug for OrdSet<T>
     }
 }
 
-impl<T> ser::Serialize for OrdSet<T>
-    where T: Ord + ser::Serialize
-{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: ser::Serializer
-    {
-        use self::ser::SerializeSeq;
+#[cfg(feature = "serde_impl")]
+mod serde {
+    extern crate serde;
 
-        let mut seq = serializer.serialize_seq(Some(self.0.len()))?;
-        for e in self.0.iter() {
-            seq.serialize_element(e)?;
+    use super::*;
+    use self::serde::{ser, de};
+
+    impl<T> ser::Serialize for OrdSet<T>
+        where T: Ord + ser::Serialize
+    {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where S: ser::Serializer
+        {
+            use self::ser::SerializeSeq;
+
+            let mut seq = serializer.serialize_seq(Some(self.0.len()))?;
+            for e in self.0.iter() {
+                seq.serialize_element(e)?;
+            }
+            seq.end()
         }
-        seq.end()
     }
-}
 
-impl<'de, T> de::Deserialize<'de> for OrdSet<T>
-    where T: Ord + de::Deserialize<'de>
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: de::Deserializer<'de>
+    impl<'de, T> de::Deserialize<'de> for OrdSet<T>
+        where T: Ord + de::Deserialize<'de>
     {
-        let mut elems: Vec<T> = Vec::deserialize(deserializer)?;
-        elems.sort();
-        Ok(OrdSet(elems))
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where D: de::Deserializer<'de>
+        {
+            let mut elems: Vec<T> = Vec::deserialize(deserializer)?;
+            elems.sort();
+            Ok(OrdSet(elems))
+        }
     }
 }
