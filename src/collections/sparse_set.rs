@@ -4,6 +4,7 @@ use std::alloc::{Layout, alloc, realloc, dealloc, handle_alloc_error};
 use std::convert::{TryFrom, TryInto};
 use std::collections::VecDeque;
 use std::ops::Deref;
+use std::ptr::NonNull;
 
 use serde::{ser, de};
 
@@ -26,8 +27,8 @@ use serde::{ser, de};
 pub struct SparseSet<T: TryFrom<usize> + TryInto<usize> + Copy> {
     capacity: usize,
     len: usize,
-    dense: *mut T,
-    sparse: *mut T,
+    dense: NonNull<T>,
+    sparse: NonNull<T>,
 }
 
 impl<T: TryFrom<usize> + TryInto<usize> + Copy> SparseSet<T> {
@@ -71,8 +72,8 @@ impl<T: TryFrom<usize> + TryInto<usize> + Copy> SparseSet<T> {
         } else if !self.contains(&value) {
             let i = self.len;
             unsafe {
-                std::ptr::write(self.dense.offset(i as isize), value);
-                std::ptr::write(self.sparse.offset(val as isize), to_value(i));
+                std::ptr::write(self.dense.as_ptr().offset(i as isize), value);
+                std::ptr::write(self.sparse.as_ptr().offset(val as isize), to_value(i));
             }
             self.len += 1;
         }
@@ -80,9 +81,9 @@ impl<T: TryFrom<usize> + TryInto<usize> + Copy> SparseSet<T> {
 
     pub fn contains(&self, value: &T) -> bool {
         let val = to_usize(*value);
-        let i = to_usize(unsafe { std::ptr::read(self.sparse.offset(val as isize)) });
+        let i = to_usize(unsafe { std::ptr::read(self.sparse.as_ptr().offset(val as isize)) });
         if i < self.len {
-            let j = to_usize(unsafe { std::ptr::read(self.dense.offset(i as isize)) });
+            let j = to_usize(unsafe { std::ptr::read(self.dense.as_ptr().offset(i as isize)) });
             val == j
         } else {
             false
@@ -94,8 +95,8 @@ impl<T: TryFrom<usize> + TryInto<usize> + Copy> Clone for SparseSet<T> {
     fn clone(&self) -> Self {
         let mut s = SparseSet::new(self.capacity);
         unsafe {
-            std::ptr::copy_nonoverlapping(self.dense, s.dense, self.len);
-            std::ptr::copy_nonoverlapping(self.sparse, s.sparse, self.capacity);
+            std::ptr::copy_nonoverlapping(self.dense.as_ptr(), s.dense.as_ptr(), self.len);
+            std::ptr::copy_nonoverlapping(self.sparse.as_ptr(), s.sparse.as_ptr(), self.capacity);
         }
         s.len = self.len;
         s
@@ -115,7 +116,7 @@ impl<T: TryFrom<usize> + TryInto<usize> + Copy> Deref for SparseSet<T> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
-        unsafe { std::slice::from_raw_parts(self.dense, self.len) }
+        unsafe { std::slice::from_raw_parts(self.dense.as_ptr(), self.len) }
     }
 }
 
@@ -230,34 +231,42 @@ fn layout<T>(size: usize) -> Layout {
 }
 
 #[inline]
-unsafe fn mem_alloc<T>(size: usize) -> *mut T {
-    let l = layout::<T>(size);
-
-    let ptr = alloc(l);
-    if ptr.is_null() {
-        handle_alloc_error(l);
+unsafe fn mem_alloc<T>(size: usize) -> NonNull<T> {
+    if size == 0 {
+        NonNull::dangling()
     } else {
-        ptr as *mut T
+        let l = layout::<T>(size);
+        let ptr = alloc(l);
+        if ptr.is_null() {
+            handle_alloc_error(l);
+        } else {
+            NonNull::new_unchecked(ptr as *mut T)
+        }
     }
 }
 
 #[inline]
-unsafe fn mem_realloc<T>(ptr: *mut T, size: usize, new_size: usize) -> *mut T {
-    let l = layout::<T>(size);
-
-    let ptr = realloc(ptr as *mut u8, l, layout::<T>(new_size).size());
-    if ptr.is_null() {
-        handle_alloc_error(l);
+unsafe fn mem_realloc<T>(ptr: NonNull<T>, size: usize, new_size: usize) -> NonNull<T> {
+    if size == 0 {
+        mem_alloc(new_size)
     } else {
-        ptr as *mut T
+        let l = layout::<T>(size);
+
+        let ptr = realloc(ptr.as_ptr() as *mut u8, l, layout::<T>(new_size).size());
+        if ptr.is_null() {
+            handle_alloc_error(l);
+        } else {
+            NonNull::new_unchecked(ptr as *mut T)
+        }
     }
 }
 
 #[inline]
-unsafe fn mem_dealloc<T>(ptr: *mut T, size: usize) {
-    let l = layout::<T>(size);
-
-    dealloc(ptr as *mut u8, l);
+unsafe fn mem_dealloc<T>(ptr: NonNull<T>, size: usize) {
+    if size > 0 {
+        let l = layout::<T>(size);
+        dealloc(ptr.as_ptr() as *mut u8, l);
+    }
 }
 
 
@@ -283,6 +292,13 @@ mod tests {
     use std::collections::HashSet;
     use test::Bencher;
     use super::*;
+
+    #[test]
+    fn supports_zero_size() {
+        let a: SparseSet<usize> = SparseSet::new(0);
+        let b = a.clone();
+        assert_eq!(a, b);
+    }
 
     #[test]
     fn values_are_unique() {
