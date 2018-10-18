@@ -1,7 +1,7 @@
 #[macro_export]
 macro_rules! strip_ws_json {
     ($input: expr) => {
-        $crate::strip_whitespace($input, &[("\"", "\"")], &["\\\\", "\\\""])
+        $crate::ws::strip_whitespace($input, &[("\"", "\"")], &["\\\\", "\\\""])
     }
 }
 
