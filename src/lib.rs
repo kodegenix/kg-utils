@@ -1,4 +1,4 @@
-#![feature(allocator_api, try_from, test)]
+#![feature(allocator_api, alloc_layout_extra, try_from, test)]
 
 #[cfg(test)]
 extern crate test;
