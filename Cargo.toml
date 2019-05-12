@@ -10,12 +10,14 @@ license = "MIT/Apache-2.0"
 repository = "https://gihub.com/Kodegenix/kg-utils"
 edition = "2018"
 
+[workspace]
+
 [features]
 default = ["serde_impl", "heapsize_impl"]
 serde_impl = ["serde"]
 heapsize_impl = ["heapsize"]
 
 [dependencies]
-serde = { version = "1.0", optional = true }
-heapsize = { version = "0.4", optional = true }
+serde = { version = "1.0.91", optional = true }
+heapsize = { version = "0.4.2", optional = true }
 
