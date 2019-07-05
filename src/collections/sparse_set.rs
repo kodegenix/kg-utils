@@ -1,5 +1,3 @@
-use super::*;
-
 use std::alloc::{Layout, alloc, realloc, dealloc, handle_alloc_error};
 use std::convert::{TryFrom, TryInto};
 use std::collections::VecDeque;
