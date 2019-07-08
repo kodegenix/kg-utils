@@ -1,6 +1,5 @@
-use std::vec::IntoIter;
 use std::ops::Deref;
-
+use std::vec::IntoIter;
 
 /// Simple implementation of an ordered set, using `std::vec::Vec<_>` as underlying storage.
 ///
@@ -104,7 +103,8 @@ mod serde {
     extern crate serde;
 
     use super::*;
-    use self::serde::{ser, de};
+
+    use self::serde::{de, ser};
 
     impl<T> ser::Serialize for OrdSet<T>
         where T: Ord + ser::Serialize

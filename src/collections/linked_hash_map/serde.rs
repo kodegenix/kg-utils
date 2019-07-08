@@ -3,14 +3,14 @@
 extern crate serde;
 
 use std::fmt::{Formatter, Result as FmtResult};
-use std::marker::PhantomData;
 use std::hash::{BuildHasher, Hash};
+use std::marker::PhantomData;
 
 use super::LinkedHashMap;
 
-use self::serde::{Serialize, Serializer, Deserialize, Deserializer};
+use self::serde::{Deserialize, Deserializer, Serialize, Serializer};
+use self::serde::de::{Error, MapAccess, Visitor};
 use self::serde::ser::SerializeMap;
-use self::serde::de::{Visitor, MapAccess, Error};
 
 impl<K, V, S> Serialize for LinkedHashMap<K, V, S>
     where K: Serialize + Eq + Hash,

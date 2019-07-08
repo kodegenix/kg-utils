@@ -1,9 +1,10 @@
 extern crate heapsize;
 
-use self::heapsize::{HeapSizeOf, heap_size_of};
-use std::hash::{Hash, BuildHasher};
+use std::hash::{BuildHasher, Hash};
 
-use super::{LinkedHashMap, KeyRef, Node};
+use super::{KeyRef, LinkedHashMap, Node};
+
+use self::heapsize::{heap_size_of, HeapSizeOf};
 
 impl<K> HeapSizeOf for KeyRef<K> {
     fn heap_size_of_children(&self) -> usize {

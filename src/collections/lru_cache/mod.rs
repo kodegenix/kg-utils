@@ -47,7 +47,7 @@
 use std::borrow::Borrow;
 use std::collections::hash_map::RandomState;
 use std::fmt;
-use std::hash::{Hash, BuildHasher};
+use std::hash::{BuildHasher, Hash};
 
 use super::linked_hash_map::LinkedHashMap;
 

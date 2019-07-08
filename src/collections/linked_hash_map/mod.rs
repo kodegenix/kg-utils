@@ -41,6 +41,17 @@
 #![cfg_attr(feature = "clippy", plugin(clippy))]
 #![cfg_attr(feature = "clippy", deny(clippy))]
 
+use std::borrow::Borrow;
+use std::cmp::Ordering;
+use std::collections::hash_map::{self, HashMap};
+use std::fmt;
+use std::hash::{BuildHasher, Hash, Hasher};
+use std::iter;
+use std::marker;
+use std::mem;
+use std::ops::{Index, IndexMut};
+use std::ptr;
+
 // Optional Serde support
 #[cfg(feature = "serde_impl")]
 pub mod serde;
@@ -73,17 +84,6 @@ macro_rules! linkedhashmap {
          map
     }}
 }
-
-use std::borrow::Borrow;
-use std::cmp::Ordering;
-use std::collections::hash_map::{self, HashMap};
-use std::fmt;
-use std::hash::{BuildHasher, Hash, Hasher};
-use std::iter;
-use std::marker;
-use std::mem;
-use std::ops::{Index, IndexMut};
-use std::ptr;
 
 struct KeyRef<K>(*const K);
 
@@ -204,7 +204,7 @@ impl<K, V, S> LinkedHashMap<K, V, S> {
         if self.head.is_null() {
             // allocate the guard node if not present
             unsafe {
-                self.head = Box::into_raw(Box::new(mem::uninitialized()));
+                self.head = Box::into_raw(Box::new(mem::MaybeUninit::uninit().assume_init()));
                 (*self.head).next = self.head;
                 (*self.head).prev = self.head;
             }
@@ -1259,7 +1259,7 @@ impl<K: Hash + Eq, V, S: BuildHasher> IntoIterator for LinkedHashMap<K, V, S> {
         }
         self.clear_free_list();
         // drop the HashMap but not the LinkedHashMap
-        self.map = unsafe { mem::uninitialized() };
+        self.map = unsafe { mem::MaybeUninit::uninit().assume_init() };
         mem::forget(self);
 
         IntoIter {

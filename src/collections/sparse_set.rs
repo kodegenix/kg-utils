@@ -1,6 +1,6 @@
-use std::alloc::{Layout, alloc, realloc, dealloc, handle_alloc_error};
-use std::convert::{TryFrom, TryInto};
+use std::alloc::{alloc, dealloc, handle_alloc_error, Layout, realloc};
 use std::collections::VecDeque;
+use std::convert::{TryFrom, TryInto};
 use std::ops::Deref;
 use std::ptr::NonNull;
 
@@ -183,7 +183,8 @@ mod serde {
     extern crate serde;
 
     use super::*;
-    use self::serde::{ser, de};
+
+    use self::serde::{de, ser};
 
     impl<T> ser::Serialize for SparseSet<T>
         where T: TryFrom<usize> + TryInto<usize> + Copy + ser::Serialize
@@ -293,6 +294,7 @@ fn to_value<T: TryFrom<usize> + TryInto<usize> + Copy>(value: usize) -> T {
 mod tests {
     use std::collections::HashSet;
     use test::Bencher;
+
     use super::*;
 
     #[test]
