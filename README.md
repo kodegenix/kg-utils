@@ -2,6 +2,7 @@
 
 [![Latest Version](https://img.shields.io/crates/v/kg-utils.svg)](https://crates.io/crates/kg-utils)
 [![Documentation](https://docs.rs/kg-utils/badge.svg)](https://docs.rs/kg-utils)
+[![Build Status](https://travis-ci.com/Kodegenix/kg-utils.svg?branch=master)](https://travis-ci.com/Kodegenix/kg-utils)
 
 Various collections and utilities.
 
