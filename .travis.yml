@@ -4,18 +4,11 @@ language: rust
 rust:
   - nightly
 
-services:
-  - docker
-
-cache:
-  directories:
-    - target/debug/deps
-    - targe/debug/build
-
 addons:
   apt:
     packages:
       - kcov
 
 after_success: |
+  kcov --help &&
   kcov --coveralls-id=$TRAVIS_JOB_ID --exclude-pattern=/.cargo target/cov target/debug/kg-utils-*
