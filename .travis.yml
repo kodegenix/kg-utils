@@ -10,4 +10,4 @@ addons:
       - kcov
 
 after_success: 
-  -"kcov --coveralls-id=$TRAVIS_JOB_ID --exclude-pattern=/.cargo target/cov target/debug/kg-utils-*"
+  kcov --coveralls-id=$TRAVIS_JOB_ID --exclude-pattern=/.cargo target/cov target/debug/kg-utils-*
