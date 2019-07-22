@@ -7,9 +7,6 @@ rust:
 services:
   - docker
 
-script:
-  - make test-docker-env
-
 cache:
   directories:
     - target/debug/deps
