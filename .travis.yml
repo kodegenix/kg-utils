@@ -10,6 +10,4 @@ addons:
       - kcov
 
 after_success:
-  - ls -la target/cov
-  - ls -la target/debug
-  - kcov ./target/cov ./target/debug/kg-utils-*
+  - kcov ./target/cov ./target/debug/kg_utils-*
