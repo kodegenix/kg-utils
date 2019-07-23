@@ -27,3 +27,4 @@ after_success:
   - rm -rf kcov-master
   - cargo test --no-run
   - kcov --coveralls-id=$TRAVIS_JOB_ID --verify --exclude-pattern=/.cargo,/usr/lib target/cov target/debug/kg_utils-*
+  - cat target/cov/index.html
