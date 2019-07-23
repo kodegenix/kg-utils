@@ -1,13 +1,31 @@
-sudo: required
-
 language: rust
 rust:
   - nightly
 
+cache: cargo
+
+sudo: false
+
 addons:
   apt:
     packages:
-      - kcov
+      - libcurl4-openssl-dev
+      - libelf-dev
+      - libdw-dev
+      - binutils-dev
+      - cmake
+    sources:
+      - kalakris-cmake
+
+before_script:
+  - cargo install --force cargo-travis
+  - export PATH=$HOME/.cargo/bin:$PATH
 
 script:
-  kcov --coveralls-id=$TRAVIS_JOB_ID --exclude-pattern=/.cargo target/cov target/debug/kg-utils-*
+  - cargo build
+  - cargo test
+
+after_success:
+  - cargo coveralls
+
+
