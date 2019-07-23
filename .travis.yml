@@ -11,7 +11,6 @@ addons:
       - libelf-dev
       - libdw-dev
       - libiberty-dev
-      - libbfd-dev
       - zlib1g-dev
       - cmake
       - gcc
