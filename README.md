@@ -3,6 +3,7 @@
 [![Latest Version](https://img.shields.io/crates/v/kg-utils.svg)](https://crates.io/crates/kg-utils)
 [![Documentation](https://docs.rs/kg-utils/badge.svg)](https://docs.rs/kg-utils)
 [![Build Status](https://travis-ci.org/Kodegenix/kg-utils.svg?branch=master)](https://travis-ci.org/Kodegenix/kg-utils)
+[![Coverage Status](https://coveralls.io/repos/github/Kodegenix/kg-utils/badge.svg?branch=coveralls)](https://coveralls.io/github/Kodegenix/kg-utils?branch=coveralls)
 
 Various collections and utilities.
 
