@@ -23,7 +23,6 @@ before_script:
   - rustup component add rustfmt-preview
 
 script:
-  - cargo fmt -- --check
   - cargo build
   - cargo test
 
