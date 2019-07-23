@@ -20,7 +20,6 @@ addons:
 before_script:
   - cargo install --force cargo-travis
   - export PATH=$HOME/.cargo/bin:$PATH
-  - rustup component add rustfmt-preview
 
 script:
   - cargo build
