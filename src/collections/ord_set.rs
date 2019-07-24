@@ -68,6 +68,20 @@ impl<T: Ord> OrdSet<T> {
     pub fn clear(&mut self) {
         self.0.clear();
     }
+
+    pub fn retain<F>(&mut self, f: F) where F: FnMut(&T) -> bool {
+        self.0.retain(f)
+    }
+
+    pub fn append<I>(&mut self, iter: I) -> bool
+        where I: Iterator<Item = T>
+    {
+        let mut changed = false;
+        for i in iter {
+            changed |= self.insert(i);
+        }
+        changed
+    }
 }
 
 impl<T: Ord> IntoIterator for OrdSet<T> {
