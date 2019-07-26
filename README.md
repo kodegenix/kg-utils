@@ -4,6 +4,7 @@
 [![Documentation](https://docs.rs/kg-utils/badge.svg)](https://docs.rs/kg-utils)
 [![Build Status](https://travis-ci.org/Kodegenix/kg-utils.svg?branch=master)](https://travis-ci.org/Kodegenix/kg-utils)
 [![Coverage Status](https://coveralls.io/repos/github/Kodegenix/kg-utils/badge.svg?branch=master)](https://coveralls.io/github/Kodegenix/kg-utils?branch=master)
+[![Build Status](https://travis-ci.org/kodegenix/kg-utils.svg?branch=multiple-build-badges)](https://travis-ci.org/kodegenix/kg-utils)
 
 Various collections and utilities.
 
