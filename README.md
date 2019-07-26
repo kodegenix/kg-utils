@@ -6,6 +6,15 @@
 [![Coverage Status](https://coveralls.io/repos/github/Kodegenix/kg-utils/badge.svg?branch=master)](https://coveralls.io/github/Kodegenix/kg-utils?branch=master)
 [![Build Status](https://travis-ci.org/kodegenix/kg-utils.svg?branch=multiple-build-badges)](https://travis-ci.org/kodegenix/kg-utils)
 
+| Nightly           | Beta              | Stable            |
+|-------------------|-------------------|-------------------|
+| [![Build1][1]][4] | [![Build2][2]][4] | [![Build3][3]][4] |
+
+[1]: https://travis-matrix-badges.herokuapp.com/repos/kodegenix/kg-utils/branches/multiple-build-badges/1
+[2]: https://travis-matrix-badges.herokuapp.com/repos/kodegenix/kg-utils/branches/multiple-build-badges/2
+[3]: https://travis-matrix-badges.herokuapp.com/repos/kodegenix/kg-utils/branches/multiple-build-badges/3
+[4]: https://travis-ci.org/kodegenix/kg-utils
+
 Various collections and utilities.
 
 ## License
