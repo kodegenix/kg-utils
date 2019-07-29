@@ -3,7 +3,7 @@
 [![Latest Version](https://img.shields.io/crates/v/kg-utils.svg)](https://crates.io/crates/kg-utils)
 [![Documentation](https://docs.rs/kg-utils/badge.svg)](https://docs.rs/kg-utils)
 [![Build Status](https://travis-ci.org/Kodegenix/kg-utils.svg?branch=master)](https://travis-ci.org/Kodegenix/kg-utils)
-[![codecov](https://codecov.io/gh/kodegenix/kg-utils/branch/master/graph/badge.svg)](https://codecov.io/gh/mozilla/grcov)
+[![codecov](https://codecov.io/gh/kodegenix/kg-utils/branch/master/graph/badge.svg)](https://codecov.io/gh/kodegenix/kg-utils)
 [![Build Status](https://travis-ci.org/kodegenix/kg-utils.svg?branch=master)](https://travis-ci.org/kodegenix/kg-utils)
 
 Various collections and utilities.
