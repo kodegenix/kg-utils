@@ -41,15 +41,14 @@ impl<T: Ord> OrdSet<T> {
     }
 
     #[inline]
-    pub fn insert(&mut self, elem: T) -> bool {
+    pub fn insert(&mut self, elem: T) -> Option<T> {
         match self.0.binary_search(&elem) {
             Ok(index) => {
-                self.0[index] = elem;
-                true
+                Some(std::mem::replace(&mut self.0[index], elem))
             }
             Err(index) => {
                 self.0.insert(index, elem);
-                false
+                None
             }
         }
     }
@@ -69,6 +68,12 @@ impl<T: Ord> OrdSet<T> {
         self.0.clear();
     }
 
+    #[inline]
+    pub fn as_slice(&self)-> &[T] {
+        self.0.as_slice()
+    }
+
+    #[inline]
     pub fn retain<F>(&mut self, f: F) where F: FnMut(&T) -> bool {
         self.0.retain(f)
     }
@@ -78,7 +83,7 @@ impl<T: Ord> OrdSet<T> {
     {
         let mut changed = false;
         for i in iter {
-            changed |= self.insert(i);
+            changed |= self.insert(i).is_none();
         }
         changed
     }
@@ -146,5 +151,28 @@ mod serde {
             elems.sort();
             Ok(OrdSet(elems))
         }
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn insert_should_return_previous_element() {
+        let mut set = OrdSet::new();
+        set.insert(4);
+        assert_eq!(set.insert(4), Some(4));
+    }
+
+    #[test]
+    fn elements_must_be_ordered() {
+        let mut set = OrdSet::new();
+        set.insert(4);
+        set.insert(2);
+        set.insert(1);
+        set.insert(6);
+        assert_eq!(set.as_slice(), &[1, 2, 4, 6]);
     }
 }
