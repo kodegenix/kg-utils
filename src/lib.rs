@@ -7,3 +7,5 @@ pub mod collections;
 
 #[macro_use]
 pub mod ws;
+
+pub mod lock;
