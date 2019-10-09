@@ -48,6 +48,37 @@ mod sync_ref {
     }
 
 
+    struct RwLockDbg<T> {
+        lock: RwLock<T>,
+        thread_ids: Mutex<Vec<ThreadId>>,
+    }
+
+    impl<T> RwLockDbg<T> {
+        fn new(value: T) -> RwLockDbg<T> {
+            RwLockDbg {
+                lock: RwLock::new(value),
+                thread_ids: Mutex::new(Vec::new()),
+            }
+        }
+
+        #[inline(always)]
+        fn prepare_lock(&self) {
+            let id = std::thread::current().id();
+            let mut ids = self.thread_ids.lock();
+            if ids.contains(&id) {
+                panic!(DEADLOCK_MSG);
+            }
+            ids.push(id);
+        }
+
+        #[inline(always)]
+        fn prepare_unlock(&self) {
+            let id = std::thread::current().id();
+            let mut ids = self.thread_ids.lock();
+            ids.remove_item(&id);
+        }
+    }
+
     pub struct SyncRefReadGuard<'a, T> {
         guard: ManuallyDrop<RwLockReadGuard<'a, T>>,
         lock: &'a RwLockDbg<T>,
@@ -95,38 +126,6 @@ mod sync_ref {
             unsafe {
                 ManuallyDrop::drop(&mut self.guard);
             }
-        }
-    }
-
-
-    struct RwLockDbg<T> {
-        lock: RwLock<T>,
-        thread_ids: Mutex<Vec<ThreadId>>,
-    }
-
-    impl<T> RwLockDbg<T> {
-        fn new(value: T) -> RwLockDbg<T> {
-            RwLockDbg {
-                lock: RwLock::new(value),
-                thread_ids: Mutex::new(Vec::new()),
-            }
-        }
-
-        #[inline(always)]
-        fn prepare_lock(&self) {
-            let id = std::thread::current().id();
-            let mut ids = self.thread_ids.lock();
-            if ids.contains(&id) {
-                panic!(DEADLOCK_MSG);
-            }
-            ids.push(id);
-        }
-
-        #[inline(always)]
-        fn prepare_unlock(&self) {
-            let id = std::thread::current().id();
-            let mut ids = self.thread_ids.lock();
-            ids.remove_item(&id);
         }
     }
 }
@@ -192,7 +191,7 @@ mod tests {
     #[cfg(debug_assertions)]
     #[test]
     #[should_panic(expected = "deadlock detected, lock already acquired in the current thread")]
-    fn test12() {
+    fn should_detect_deadlock() {
         let a: SyncRef<String> = SyncRef::new("str".to_string());
         let _b = a.read();
         let _c = a.write();
