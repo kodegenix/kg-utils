@@ -48,6 +48,13 @@ mod sync_ref {
     }
 
 
+    impl<T> Clone for SyncRef<T> {
+        fn clone(&self) -> Self {
+            Self(self.0.clone())
+        }
+    }
+
+
     struct RwLockDbg<T> {
         lock: RwLock<T>,
         thread_ids: Mutex<Vec<ThreadId>>,
@@ -152,6 +159,11 @@ mod sync_ref {
         }
     }
 
+    impl<T> Clone for SyncRef<T> {
+        fn clone(&self) -> Self {
+            Self(self.0.clone())
+        }
+    }
 
     pub struct SyncRefReadGuard<'a, T>(RwLockReadGuard<'a, T>);
 
