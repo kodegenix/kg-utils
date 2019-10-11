@@ -13,13 +13,20 @@ unsafe impl<T> Send for SyncRef<T> {}
 
 unsafe impl<T> Sync for SyncRef<T> {}
 
+impl<T> PartialEq for SyncRef<T> {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
+}
+
+impl<T> Eq for SyncRef<T> {}
 
 #[cfg(debug_assertions)]
 mod sync_ref {
     use super::*;
     use std::mem::ManuallyDrop;
 
-    pub struct SyncRef<T>(Arc<RwLockDbg<T>>);
+    pub struct SyncRef<T>(pub(super) Arc<RwLockDbg<T>>);
 
     impl<T> SyncRef<T> {
         pub fn new(value: T) -> SyncRef<T> {
@@ -55,7 +62,7 @@ mod sync_ref {
     }
 
 
-    struct RwLockDbg<T> {
+    pub(super) struct RwLockDbg<T> {
         lock: RwLock<T>,
         thread_ids: Mutex<Vec<ThreadId>>,
     }
@@ -141,7 +148,7 @@ mod sync_ref {
 mod sync_ref {
     use super::*;
 
-    pub struct SyncRef<T>(Arc<RwLock<T>>);
+    pub struct SyncRef<T>(pub(super) Arc<RwLock<T>>);
 
     impl<T> SyncRef<T> {
         pub fn new(value: T) -> SyncRef<T> {
