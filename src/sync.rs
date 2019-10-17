@@ -1,13 +1,17 @@
 use std::sync::Arc;
 use std::ops::{Deref, DerefMut};
-use std::thread::ThreadId;
 
-use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard, Mutex};
+
+use parking_lot::{
+    RwLock,
+    RwLockReadGuard, RwLockWriteGuard,
+    MappedRwLockReadGuard, MappedRwLockWriteGuard,
+};
 
 const DEADLOCK_MSG: &str = "deadlock detected, lock already acquired in the current thread";
 
 
-pub use sync_ref::{SyncRef, SyncRefReadGuard, SyncRefWriteGuard};
+pub use sync_ref::{SyncRef, SyncRefReadGuard, SyncRefWriteGuard, SyncRefMapReadGuard, SyncRefMapWriteGuard};
 
 unsafe impl<T> Send for SyncRef<T> {}
 
@@ -24,7 +28,9 @@ impl<T> Eq for SyncRef<T> {}
 #[cfg(debug_assertions)]
 mod sync_ref {
     use super::*;
-    use std::mem::ManuallyDrop;
+    use std::ptr::NonNull;
+    use std::thread::ThreadId;
+    use parking_lot::Mutex;
 
     pub struct SyncRef<T>(pub(super) Arc<RwLockDbg<T>>);
 
@@ -35,21 +41,21 @@ mod sync_ref {
 
         #[inline(always)]
         pub fn read(&self) -> SyncRefReadGuard<T> {
-            self.0.prepare_lock();
+            self.0.threads.check_current_thread();
             let guard = self.0.lock.read();
             SyncRefReadGuard {
-                guard: ManuallyDrop::new(guard),
-                lock: &*self.0,
+                guard,
+                threads: ThreadsPtr::new(&self.0.threads),
             }
         }
 
         #[inline(always)]
         pub fn write(&self) -> SyncRefWriteGuard<T> {
-            self.0.prepare_lock();
+            self.0.threads.check_current_thread();
             let guard = self.0.lock.write();
             SyncRefWriteGuard {
-                guard: ManuallyDrop::new(guard),
-                lock: &*self.0,
+                guard,
+                threads: ThreadsPtr::new(&self.0.threads),
             }
         }
     }
@@ -61,24 +67,13 @@ mod sync_ref {
         }
     }
 
+    struct Threads(Mutex<Vec<ThreadId>>);
 
-    pub(super) struct RwLockDbg<T> {
-        lock: RwLock<T>,
-        thread_ids: Mutex<Vec<ThreadId>>,
-    }
-
-    impl<T> RwLockDbg<T> {
-        fn new(value: T) -> RwLockDbg<T> {
-            RwLockDbg {
-                lock: RwLock::new(value),
-                thread_ids: Mutex::new(Vec::new()),
-            }
-        }
-
+    impl Threads {
         #[inline(always)]
-        fn prepare_lock(&self) {
+        fn check_current_thread(&self) {
             let id = std::thread::current().id();
-            let mut ids = self.thread_ids.lock();
+            let mut ids = self.0.lock();
             if ids.contains(&id) {
                 panic!(DEADLOCK_MSG);
             }
@@ -86,60 +81,131 @@ mod sync_ref {
         }
 
         #[inline(always)]
-        fn prepare_unlock(&self) {
+        fn remove_current_thread(&self) {
             let id = std::thread::current().id();
-            let mut ids = self.thread_ids.lock();
+            let mut ids = self.0.lock();
             ids.remove_item(&id);
         }
     }
 
+    struct ThreadsPtr(NonNull<Threads>);
+
+    impl ThreadsPtr {
+        fn new(threads: &Threads) -> ThreadsPtr {
+            ThreadsPtr(NonNull::from(threads))
+        }
+    }
+
+    impl Drop for ThreadsPtr {
+        fn drop(&mut self) {
+            unsafe { self.0.as_mut() }.remove_current_thread();
+        }
+    }
+
+    pub(super) struct RwLockDbg<T> {
+        lock: RwLock<T>,
+        threads: Threads,
+    }
+
+    impl<T> RwLockDbg<T> {
+        fn new(value: T) -> RwLockDbg<T> {
+            RwLockDbg {
+                lock: RwLock::new(value),
+                threads: Threads(Mutex::new(Vec::new())),
+            }
+        }
+    }
+
     pub struct SyncRefReadGuard<'a, T> {
-        guard: ManuallyDrop<RwLockReadGuard<'a, T>>,
-        lock: &'a RwLockDbg<T>,
+        threads: ThreadsPtr,
+        guard: RwLockReadGuard<'a, T>,
+    }
+
+    impl<'a, T> SyncRefReadGuard<'a, T> {
+        pub fn map<U, F>(s: Self, f: F) -> SyncRefMapReadGuard<'a, U>
+            where F: FnOnce(&T) -> &U
+        {
+            let threads = s.threads;
+            let guard = s.guard;
+            SyncRefMapReadGuard {
+                threads,
+                guard: RwLockReadGuard::map(guard, f),
+            }
+        }
     }
 
     impl<'a, T> Deref for SyncRefReadGuard<'a, T> {
         type Target = T;
 
         fn deref(&self) -> &Self::Target {
-            self.guard.deref().deref()
-        }
-    }
-
-    impl<'a, T> Drop for SyncRefReadGuard<'a, T> {
-        fn drop(&mut self) {
-            self.lock.prepare_unlock();
-            unsafe {
-                ManuallyDrop::drop(&mut self.guard);
-            }
+            self.guard.deref()
         }
     }
 
     pub struct SyncRefWriteGuard<'a, T> {
-        guard: ManuallyDrop<RwLockWriteGuard<'a, T>>,
-        lock: &'a RwLockDbg<T>,
+        threads: ThreadsPtr,
+        guard: RwLockWriteGuard<'a, T>,
+    }
+
+    impl<'a, T> SyncRefWriteGuard<'a, T> {
+        pub fn map<U, F>(s: Self, f: F) -> SyncRefMapWriteGuard<'a, U>
+            where F: FnOnce(&mut T) -> &mut U
+        {
+            let threads = s.threads;
+            let guard = s.guard;
+            SyncRefMapWriteGuard {
+                threads,
+                guard: RwLockWriteGuard::map(guard, f),
+            }
+        }
     }
 
     impl<'a, T> Deref for SyncRefWriteGuard<'a, T> {
         type Target = T;
 
         fn deref(&self) -> &Self::Target {
-            self.guard.deref().deref()
+            self.guard.deref()
         }
     }
 
     impl<'a, T> DerefMut for SyncRefWriteGuard<'a, T> {
         fn deref_mut(&mut self) -> &mut Self::Target {
-            self.guard.deref_mut().deref_mut()
+            self.guard.deref_mut()
         }
     }
 
-    impl<'a, T> Drop for SyncRefWriteGuard<'a, T> {
-        fn drop(&mut self) {
-            self.lock.prepare_unlock();
-            unsafe {
-                ManuallyDrop::drop(&mut self.guard);
-            }
+
+    pub struct SyncRefMapReadGuard<'a, T> {
+        #[allow(dead_code)]
+        threads: ThreadsPtr,
+        guard: MappedRwLockReadGuard<'a, T>,
+    }
+
+    impl<'a, T> Deref for SyncRefMapReadGuard<'a, T> {
+        type Target = T;
+
+        fn deref(&self) -> &Self::Target {
+            self.guard.deref()
+        }
+    }
+
+    pub struct SyncRefMapWriteGuard<'a, T> {
+        #[allow(dead_code)]
+        threads: ThreadsPtr,
+        guard: MappedRwLockWriteGuard<'a, T>,
+    }
+
+    impl<'a, T> Deref for SyncRefMapWriteGuard<'a, T> {
+        type Target = T;
+
+        fn deref(&self) -> &Self::Target {
+            self.guard.deref()
+        }
+    }
+
+    impl<'a, T> DerefMut for SyncRefMapWriteGuard<'a, T> {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            self.guard.deref_mut()
         }
     }
 }
@@ -174,6 +240,15 @@ mod sync_ref {
 
     pub struct SyncRefReadGuard<'a, T>(RwLockReadGuard<'a, T>);
 
+    impl<'a, T> SyncRefReadGuard<'a, T> {
+        pub fn map<U, F>(s: Self, f: F) -> SyncRefMapReadGuard<'a, U>
+            where F: FnOnce(&T) -> &U
+        {
+            let guard = s.0;
+            SyncRefMapReadGuard(RwLockReadGuard::map(guard, f))
+        }
+    }
+
     impl<'a, T> Deref for SyncRefReadGuard<'a, T> {
         type Target = T;
 
@@ -185,6 +260,15 @@ mod sync_ref {
 
     pub struct SyncRefWriteGuard<'a, T>(RwLockWriteGuard<'a, T>);
 
+    impl<'a, T> SyncRefWriteGuard<'a, T> {
+        pub fn map<U, F>(s: Self, f: F) -> SyncRefMapWriteGuard<'a, U>
+            where F: FnOnce(&mut T) -> &mut U
+        {
+            let guard = s.0;
+            SyncRefMapWriteGuard(RwLockWriteGuard::map(guard, f))
+        }
+    }
+
     impl<'a, T> Deref for SyncRefWriteGuard<'a, T> {
         type Target = T;
 
@@ -194,6 +278,33 @@ mod sync_ref {
     }
 
     impl<'a, T> DerefMut for SyncRefWriteGuard<'a, T> {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            self.0.deref_mut()
+        }
+    }
+
+    pub struct SyncRefMapReadGuard<'a, T>(MappedRwLockReadGuard<'a, T>);
+
+    impl<'a, T> Deref for SyncRefMapReadGuard<'a, T> {
+        type Target = T;
+
+        fn deref(&self) -> &Self::Target {
+            self.0.deref()
+        }
+    }
+
+
+    pub struct SyncRefMapWriteGuard<'a, T>(MappedRwLockWriteGuard<'a, T>);
+
+    impl<'a, T> Deref for SyncRefMapWriteGuard<'a, T> {
+        type Target = T;
+
+        fn deref(&self) -> &Self::Target {
+            self.0.deref()
+        }
+    }
+
+    impl<'a, T> DerefMut for SyncRefMapWriteGuard<'a, T> {
         fn deref_mut(&mut self) -> &mut Self::Target {
             self.0.deref_mut()
         }
@@ -211,7 +322,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "deadlock detected, lock already acquired in the current thread")]
     fn should_detect_deadlock() {
-        let a: SyncRef<String> = SyncRef::new("str".to_string());
+        let a: SyncRef<()> = SyncRef::new(());
         let _b = a.read();
         let _c = a.write();
     }
