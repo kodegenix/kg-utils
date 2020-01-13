@@ -1259,7 +1259,8 @@ impl<K: Hash + Eq, V, S: BuildHasher> IntoIterator for LinkedHashMap<K, V, S> {
         }
         self.clear_free_list();
         // drop the HashMap but not the LinkedHashMap
-        self.map = unsafe { mem::MaybeUninit::uninit().assume_init() };
+        let map = mem::MaybeUninit::uninit();
+        self.map = unsafe { map.assume_init() };
         mem::forget(self);
 
         IntoIter {
