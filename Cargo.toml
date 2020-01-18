@@ -18,6 +18,6 @@ serde_impl = ["serde"]
 heapsize_impl = ["heapsize"]
 
 [dependencies]
-serde = { version = "1.0.102", optional = true }
+serde = { version = "1.0.104", optional = true }
 heapsize = { version = "0.4.2", optional = true }
-parking_lot = { version = "0.9.0", features = ["nightly"] }
+parking_lot = { version = "0.10.0", features = ["nightly"] }
