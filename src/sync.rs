@@ -84,7 +84,9 @@ mod sync_ref {
         fn remove_current_thread(&self) {
             let id = std::thread::current().id();
             let mut ids = self.0.lock();
-            ids.remove_item(&id);
+            if let Some(index) = ids.iter().position(|e| *e == id) {
+                ids.remove(index);
+            }
         }
     }
 
