@@ -27,12 +27,16 @@ pub struct SparseSet<T: TryFrom<usize> + TryInto<usize> + Copy> {
 }
 
 impl<T: TryFrom<usize> + TryInto<usize> + Copy> SparseSet<T> {
-    pub fn new(size: usize) -> SparseSet<T> {
+    pub fn new() -> SparseSet<T> {
+        Self::with_capacity(0)
+    }
+
+    pub fn with_capacity(capacity: usize) -> SparseSet<T> {
         SparseSet {
-            capacity: size,
+            capacity,
             len: 0,
-            dense: unsafe { mem_alloc(size) },
-            sparse: unsafe { mem_alloc(size) },
+            dense: unsafe { mem_alloc(capacity) },
+            sparse: unsafe { mem_alloc(capacity) },
         }
     }
 
@@ -48,12 +52,15 @@ impl<T: TryFrom<usize> + TryInto<usize> + Copy> SparseSet<T> {
         self.capacity
     }
 
-    pub fn resize(&mut self, size: usize) {
-        if self.capacity < size {
-            self.dense = unsafe { mem_realloc(self.dense, self.capacity, size) };
-            self.sparse = unsafe { mem_realloc(self.sparse, self.capacity, size) };
+    pub fn resize(&mut self, capacity: usize) {
+        if self.capacity != capacity {
+            unsafe {
+                self.dense = mem_realloc(self.dense, self.capacity, capacity);
+                self.sparse = mem_realloc(self.sparse, self.capacity, capacity);
+            }
+            self.capacity = capacity;
+            self.len = 0;
         }
-        self.capacity = size;
     }
 
     pub fn clear(&mut self) {
@@ -75,20 +82,24 @@ impl<T: TryFrom<usize> + TryInto<usize> + Copy> SparseSet<T> {
     }
 
     pub fn contains(&self, value: &T) -> bool {
-        let val = to_usize(*value);
-        let i = to_usize(unsafe { std::ptr::read(self.sparse.as_ptr().offset(val as isize)) });
-        if i < self.len {
-            let j = to_usize(unsafe { std::ptr::read(self.dense.as_ptr().offset(i as isize)) });
-            val == j
-        } else {
+        if self.len == 0 {
             false
+        } else {
+            let val = to_usize(*value);
+            let i = to_usize(unsafe { std::ptr::read(self.sparse.as_ptr().offset(val as isize)) });
+            if i < self.len {
+                let j = to_usize(unsafe { std::ptr::read(self.dense.as_ptr().offset(i as isize)) });
+                val == j
+            } else {
+                false
+            }
         }
     }
 }
 
 impl<T: TryFrom<usize> + TryInto<usize> + Copy> Clone for SparseSet<T> {
     fn clone(&self) -> Self {
-        let mut s = SparseSet::new(self.capacity);
+        let mut s = SparseSet::with_capacity(self.capacity);
         unsafe {
             std::ptr::copy_nonoverlapping(self.dense.as_ptr(), s.dense.as_ptr(), self.len);
             std::ptr::copy_nonoverlapping(self.sparse.as_ptr(), s.sparse.as_ptr(), self.capacity);
@@ -123,8 +134,8 @@ impl<T: TryFrom<usize> + TryInto<usize> + Copy + std::fmt::Debug> std::fmt::Debu
 }
 
 impl<A, B> PartialEq<SparseSet<B>> for SparseSet<A>
-where A: TryFrom<usize> + TryInto<usize> + Copy + PartialEq<B>,
-      B: TryFrom<usize> + TryInto<usize> + Copy
+    where A: TryFrom<usize> + TryInto<usize> + Copy + PartialEq<B>,
+          B: TryFrom<usize> + TryInto<usize> + Copy
 {
     fn eq(&self, other: &SparseSet<B>) -> bool {
         if self.len() == other.len() {
@@ -159,8 +170,8 @@ impl<A, B> PartialEq<Vec<B>> for SparseSet<A>
 }
 
 impl<A, B> PartialEq<VecDeque<B>> for SparseSet<A>
-where A: TryFrom<usize> + TryInto<usize> + Copy + PartialEq<B>,
-      B: TryFrom<usize> + TryInto<usize> + Copy
+    where A: TryFrom<usize> + TryInto<usize> + Copy + PartialEq<B>,
+          B: TryFrom<usize> + TryInto<usize> + Copy
 {
     fn eq(&self, other: &VecDeque<B>) -> bool {
         if self.len() == other.len() {
@@ -176,7 +187,14 @@ where A: TryFrom<usize> + TryInto<usize> + Copy + PartialEq<B>,
     }
 }
 
+impl<T: TryFrom<usize> + TryInto<usize> + Copy> Default for SparseSet<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 unsafe impl<T: TryFrom<usize> + TryInto<usize> + Copy> Send for SparseSet<T> {}
+
 
 #[cfg(feature = "serde_impl")]
 mod serde {
@@ -215,7 +233,7 @@ mod serde {
                 max = std::cmp::max(max, to_usize(e));
             }
 
-            let mut set = SparseSet::new(max);
+            let mut set = SparseSet::with_capacity(max);
             for e in elems {
                 set.insert(e);
             }
@@ -299,14 +317,14 @@ mod tests {
 
     #[test]
     fn supports_zero_size() {
-        let a: SparseSet<usize> = SparseSet::new(0);
+        let a: SparseSet<usize> = SparseSet::new();
         let b = a.clone();
         assert_eq!(a, b);
     }
 
     #[test]
     fn values_are_unique() {
-        let mut set = SparseSet::new(1024);
+        let mut set = SparseSet::with_capacity(1024);
         let mut count = 0;
         for i in 0u16..1024u16 {
             if (i % 3) == 0 {
@@ -335,7 +353,7 @@ mod tests {
 
     #[test]
     fn iterate_in_insertion_order() {
-        let mut set = SparseSet::new(1024);
+        let mut set = SparseSet::with_capacity(1024);
         let mut vec = Vec::with_capacity(1024);
         for i in 0u16..1024u16 {
             if (i % 3) == 0 {
@@ -352,7 +370,7 @@ mod tests {
     #[test]
     fn clone_makes_deep_copy() {
         let set = {
-            let mut set = SparseSet::new(1024);
+            let mut set = SparseSet::with_capacity(1024);
             for i in 0u16..1024u16 {
                 if (i % 3) == 0 {
                     set.insert(i);
@@ -372,7 +390,7 @@ mod tests {
 
     #[bench]
     fn sparse_set_insert_bench(b: &mut Bencher) {
-        let mut set = SparseSet::new(1024);
+        let mut set = SparseSet::with_capacity(1024);
 
         b.iter(|| {
             set.clear();
@@ -414,7 +432,7 @@ mod tests {
 
     #[bench]
     fn sparse_set_contains_bench(b: &mut Bencher) {
-        let mut set = SparseSet::new(1024);
+        let mut set = SparseSet::with_capacity(1024);
         for i in 0u16..1024u16 {
             if (i % 3) == 0 {
                 set.insert(i);
