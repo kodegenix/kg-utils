@@ -1,4 +1,4 @@
-#![feature(allocator_api, alloc_layout_extra, vec_remove_item, test)]
+#![feature(allocator_api, alloc_layout_extra, test)]
 
 #[cfg(test)]
 extern crate test;
