@@ -247,7 +247,7 @@ mod serde {
 fn layout<T>(size: usize) -> Layout {
     match Layout::array::<T>(size) {
         Ok(layout) => layout,
-        Err(err) => panic!(err.to_string()),
+        Err(err) => panic!("{}", err.to_string()),
     }
 }
 

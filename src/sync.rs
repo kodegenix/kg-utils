@@ -75,7 +75,7 @@ mod sync_ref {
             let id = std::thread::current().id();
             let mut ids = self.0.lock();
             if ids.contains(&id) {
-                panic!(DEADLOCK_MSG);
+                panic!("{}", DEADLOCK_MSG);
             }
             ids.push(id);
         }
