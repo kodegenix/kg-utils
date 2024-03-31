@@ -7,7 +7,7 @@ Various collections and utilities.
 """
 readme = "README.md"
 license = "MIT/Apache-2.0"
-repository = "https://gihub.com/Kodegenix/kg-utils"
+repository = "https://github.com/Kodegenix/kg-utils"
 edition = "2018"
 
 [workspace]
